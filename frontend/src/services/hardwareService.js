@@ -129,6 +129,25 @@ export const createHardwareSet = async (hwName, totalCapacity, description = '')
 };
 
 /**
+ * Delete a hardware set (admin only)
+ * @param {string} hwName - Hardware set name to delete
+ * @returns {Promise<Object>} Response with success status
+ */
+export const deleteHardwareSet = async (hwName) => {
+  try {
+    const response = await api.delete('/delete_hardware_set', {
+      data: { hw_name: hwName },
+    });
+    return response.data;
+  } catch (error) {
+    if (error.response && error.response.data) {
+      return error.response.data;
+    }
+    return { success: false, error: 'Failed to connect to server' };
+  }
+};
+
+/**
  * Get hardware checkout history for a project (future implementation)
  * @param {string} projectId - Project ID
  * @returns {Promise<Object>} Response with checkout history

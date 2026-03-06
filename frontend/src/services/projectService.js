@@ -96,6 +96,38 @@ export const getProjectDetails = async (projectId) => {
 };
 
 /**
+ * Add a member to a project (owner only)
+ * @param {string} projectId - Project ID
+ * @param {string} username - Username to add
+ * @returns {Promise<Object>} Response with success status
+ */
+export const addMember = async (projectId, username) => {
+  try {
+    const response = await api.post('/add_member', { project_id: projectId, username });
+    return response.data;
+  } catch (error) {
+    if (error.response && error.response.data) return error.response.data;
+    return { success: false, error: 'Failed to connect to server' };
+  }
+};
+
+/**
+ * Remove a member from a project (owner only)
+ * @param {string} projectId - Project ID
+ * @param {string} username - Username to remove
+ * @returns {Promise<Object>} Response with success status
+ */
+export const removeMember = async (projectId, username) => {
+  try {
+    const response = await api.post('/remove_member', { project_id: projectId, username });
+    return response.data;
+  } catch (error) {
+    if (error.response && error.response.data) return error.response.data;
+    return { success: false, error: 'Failed to connect to server' };
+  }
+};
+
+/**
  * Leave a project (future implementation)
  * @param {string} projectId - Project ID
  * @returns {Promise<Object>} Response with success status

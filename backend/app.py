@@ -25,7 +25,17 @@ app.config['SESSION_TYPE'] = 'filesystem'
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=24)
 
 # Enable CORS for frontend communication
-CORS(app, supports_credentials=True)
+CORS(app, origins=['http://localhost:3000'], supports_credentials=True)
+
+@app.after_request
+def add_cors_headers(response):
+    origin = request.headers.get('Origin')
+    if origin in ['http://localhost:3000']:
+        response.headers['Access-Control-Allow-Origin'] = origin
+        response.headers['Access-Control-Allow-Credentials'] = 'true'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
+        response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
+    return response
 
 # ============================================================================
 # Authentication Routes
@@ -84,6 +94,7 @@ def login():
         if result['success']:
             # Create session
             session['username'] = username
+            session['role'] = result.get('role', 'user')
             session.permanent = True
             return jsonify(result), 200
         else:
@@ -112,18 +123,87 @@ def logout():
 @app.route('/get_user_projects_list', methods=['GET'])
 def get_user_projects_list():
     """
-    Get list of projects for the authenticated user.
-    
+    Get list of projects for the authenticated user with full details.
+
     Returns:
-        JSON response with array of user's projects
+        JSON response with array of project objects {id, name, description, role}
     """
     if 'username' not in session:
         return jsonify({'success': False, 'error': 'Not authenticated'}), 401
-    
+
     try:
         username = session['username']
-        result = usersDB.getUserProjects(username)
-        return jsonify(result), 200
+        id_result = usersDB.getUserProjects(username)
+
+        if not id_result['success']:
+            return jsonify(id_result), 200
+
+        project_ids = id_result.get('projects', [])
+        projects = []
+        for project_id in project_ids:
+            detail = projectsDB.getProject(project_id, username)
+            if detail['success']:
+                p = detail['project']
+                projects.append({
+                    'id': p['_id'],
+                    'name': p['name'],
+                    'description': p.get('description', ''),
+                    'role': 'owner' if p.get('owner') == username else 'member',
+                    'members': p.get('members', []),
+                    'hardware_checkouts': p.get('hardware_checkouts', []),
+                })
+
+        return jsonify({'success': True, 'projects': projects}), 200
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# ============================================================================
+# Admin Routes
+# ============================================================================
+
+@app.route('/admin/all_users', methods=['GET'])
+def admin_all_users():
+    """
+    Get all users with their projects and hardware checkout details (admin only).
+
+    Returns:
+        JSON list of users, each with: username, role, projects (with hardware_checkouts)
+    """
+    if 'username' not in session:
+        return jsonify({'success': False, 'error': 'Not authenticated'}), 401
+
+    requester_role = session.get('role')
+    if requester_role not in ('admin', 'superadmin'):
+        return jsonify({'success': False, 'error': 'Admin access required'}), 403
+
+    try:
+        is_superadmin = requester_role == 'superadmin'
+        raw_users = usersDB.getAllUsersWithPasswords() if is_superadmin else usersDB.getAllUsers()
+        result = []
+        for user in raw_users:
+            username = user['username']
+            project_ids = user.get('projects', [])
+            projects = []
+            for pid in project_ids:
+                detail = projectsDB.getProject(pid, username)
+                if detail['success']:
+                    p = detail['project']
+                    projects.append({
+                        'id': p['_id'],
+                        'name': p['name'],
+                        'role': 'owner' if p.get('owner') == username else 'member',
+                        'hardware_checkouts': p.get('hardware_checkouts', []),
+                    })
+            entry = {
+                'username': username,
+                'role': user.get('role', 'user'),
+                'projects': projects,
+            }
+            if is_superadmin:
+                entry['password'] = user.get('password', '')
+            result.append(entry)
+        return jsonify({'success': True, 'users': result, 'show_passwords': is_superadmin}), 200
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
@@ -194,6 +274,87 @@ def join_project():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+@app.route('/add_member', methods=['POST'])
+def add_member():
+    """
+    Add a user to a project (owner only).
+
+    Request Body:
+        - project_id (str): Project ID
+        - username (str): Username to add
+    """
+    if 'username' not in session:
+        return jsonify({'success': False, 'error': 'Not authenticated'}), 401
+
+    try:
+        data = request.get_json()
+        project_id = data.get('project_id')
+        target_username = data.get('username', '').strip()
+        requester = session['username']
+
+        if not target_username:
+            return jsonify({'success': False, 'error': 'Username is required'}), 400
+
+        # Verify requester is the project owner
+        detail = projectsDB.getProject(project_id, requester)
+        if not detail['success']:
+            return jsonify({'success': False, 'error': 'Project not found or access denied'}), 404
+        if detail['project'].get('owner') != requester:
+            return jsonify({'success': False, 'error': 'Only the project owner can add members'}), 403
+
+        # Verify target user exists
+        target_user = usersDB.getUser(target_username)
+        if not target_user:
+            return jsonify({'success': False, 'error': f'User "{target_username}" does not exist'}), 404
+
+        result = projectsDB.addUser(project_id, target_username)
+        if result['success']:
+            return jsonify(result), 200
+        else:
+            return jsonify(result), 400
+
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/remove_member', methods=['POST'])
+def remove_member():
+    """
+    Remove a user from a project (owner only).
+
+    Request Body:
+        - project_id (str): Project ID
+        - username (str): Username to remove
+    """
+    if 'username' not in session:
+        return jsonify({'success': False, 'error': 'Not authenticated'}), 401
+
+    try:
+        data = request.get_json()
+        project_id = data.get('project_id')
+        target_username = data.get('username', '').strip()
+        requester = session['username']
+
+        if not target_username:
+            return jsonify({'success': False, 'error': 'Username is required'}), 400
+
+        # Verify requester is the project owner
+        detail = projectsDB.getProject(project_id, requester)
+        if not detail['success']:
+            return jsonify({'success': False, 'error': 'Project not found or access denied'}), 404
+        if detail['project'].get('owner') != requester:
+            return jsonify({'success': False, 'error': 'Only the project owner can remove members'}), 403
+
+        result = projectsDB.removeUser(project_id, target_username)
+        if result['success']:
+            return jsonify(result), 200
+        else:
+            return jsonify(result), 400
+
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 @app.route('/get_project_details/<project_id>', methods=['GET'])
 def get_project_details(project_id):
     """
@@ -240,22 +401,55 @@ def create_hardware_set():
     """
     if 'username' not in session:
         return jsonify({'success': False, 'error': 'Not authenticated'}), 401
-    
-    # TODO: Add admin role check
-    
+
+    if session.get('role') not in ('admin', 'superadmin'):
+        return jsonify({'success': False, 'error': 'Admin access required'}), 403
+
     try:
         data = request.get_json()
         hw_name = data.get('hw_name')
         total_capacity = data.get('total_capacity')
         description = data.get('description', '')
-        
+
         result = hardwareDB.createHardwareSet(hw_name, total_capacity, description)
-        
+
         if result['success']:
             return jsonify(result), 201
         else:
             return jsonify(result), 400
-            
+
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/delete_hardware_set', methods=['DELETE'])
+def delete_hardware_set():
+    """
+    Delete a hardware set (admin only).
+
+    Request Body:
+        - hw_name (str): Hardware set name to delete
+
+    Returns:
+        JSON response with success status
+    """
+    if 'username' not in session:
+        return jsonify({'success': False, 'error': 'Not authenticated'}), 401
+
+    if session.get('role') not in ('admin', 'superadmin'):
+        return jsonify({'success': False, 'error': 'Admin access required'}), 403
+
+    try:
+        data = request.get_json()
+        hw_name = data.get('hw_name')
+
+        result = hardwareDB.deleteHardwareSet(hw_name)
+
+        if result['success']:
+            return jsonify(result), 200
+        else:
+            return jsonify(result), 400
+
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 

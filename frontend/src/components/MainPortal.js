@@ -10,8 +10,9 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { logout } from '../services/authService';
 
-function MainPortal({ username, onLogout }) {
+function MainPortal({ username, userRole, onLogout }) {
   const navigate = useNavigate();
+  const isAdmin = userRole === 'admin' || userRole === 'superadmin';
 
   /**
    * Handle user logout
@@ -48,7 +49,7 @@ function MainPortal({ username, onLogout }) {
       <header className="portal-header">
         <h1>Hardware Lab Management System</h1>
         <div className="user-info">
-          <span>Welcome, <strong>{username}</strong></span>
+          <span>Welcome, <strong>{username}</strong>{isAdmin && <span className="admin-tag"> (Admin)</span>}</span>
           <button onClick={handleLogout} className="logout-btn">Logout</button>
         </div>
       </header>
@@ -75,6 +76,16 @@ function MainPortal({ username, onLogout }) {
             <p>View and manage hardware equipment</p>
             <button className="card-button">Go to Hardware</button>
           </div>
+
+          {/* Admin Panel Card (admin only) */}
+          {isAdmin && (
+            <div className="portal-card admin-card" onClick={() => navigate('/admin')}>
+              <div className="card-icon">⚙️</div>
+              <h3>Admin Panel</h3>
+              <p>View all users and their hardware checkout status</p>
+              <button className="card-button admin-btn">Go to Admin Panel</button>
+            </div>
+          )}
         </div>
       </main>
 
@@ -186,6 +197,27 @@ function MainPortal({ username, onLogout }) {
 
         .card-button:hover {
           background: #5568d3;
+        }
+
+        .admin-card {
+          border: 2px solid #764ba2;
+        }
+
+        .admin-btn {
+          background: #764ba2;
+        }
+
+        .admin-btn:hover {
+          background: #5e3a83;
+        }
+
+        .admin-tag {
+          font-size: 0.78rem;
+          background: rgba(255,255,255,0.25);
+          padding: 0.1rem 0.4rem;
+          border-radius: 3px;
+          margin-left: 0.3rem;
+          font-weight: normal;
         }
       `}</style>
     </div>

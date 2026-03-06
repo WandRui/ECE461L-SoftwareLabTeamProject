@@ -52,7 +52,7 @@ function LoginPage({ onLogin }) {
         // Login
         const response = await login(username, password);
         if (response.success) {
-          onLogin(username);
+          onLogin(username, response.role || 'user');
         } else {
           setError(response.error || 'Login failed');
         }
@@ -63,7 +63,7 @@ function LoginPage({ onLogin }) {
           // Auto-login after successful registration
           const loginResponse = await login(username, password);
           if (loginResponse.success) {
-            onLogin(username);
+            onLogin(username, loginResponse.role || 'user');
           }
         } else {
           setError(response.error || 'Registration failed');

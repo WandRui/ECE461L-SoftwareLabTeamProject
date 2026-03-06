@@ -26,6 +26,9 @@ export const register = async (username, password) => {
     if (error.response && error.response.data) {
       return error.response.data;
     }
+    if (error.code === 'ECONNREFUSED' || error.message === 'Network Error') {
+      return { success: false, error: 'Cannot connect to server. Please make sure the backend is running.' };
+    }
     return {
       success: false,
       error: 'Failed to connect to server',

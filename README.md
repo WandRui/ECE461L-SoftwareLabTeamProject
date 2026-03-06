@@ -26,12 +26,30 @@ Get up and running in 5 minutes!
 
 ### Step 1: Start MongoDB
 
-**Option A: Local MongoDB**
+> ⚠️ **MongoDB must be running before starting the backend. Registration and login will fail otherwise.**
+
+**Option A: macOS (Homebrew) — Recommended**
 ```bash
-mongod
+brew services start mongodb-community
 ```
 
-**Option B: MongoDB Atlas (Cloud)**
+Verify MongoDB is running:
+```bash
+lsof -Pi :27017 -sTCP:LISTEN
+# If you see output, MongoDB is running on port 27017
+```
+
+Stop MongoDB:
+```bash
+brew services stop mongodb-community
+```
+
+**Option B: 直接启动（非 Homebrew）**
+```bash
+mongod --dbpath /usr/local/var/mongodb
+```
+
+**Option C: MongoDB Atlas (Cloud)**
 1. Create account at [MongoDB Atlas](https://www.mongodb.com/cloud/atlas)
 2. Get connection string
 3. Update `backend/config.py`
@@ -42,13 +60,13 @@ mongod
 cd backend
 
 # Create virtual environment
-python -m venv venv
+python -m venv .venv
 
 # Activate virtual environment
 # macOS/Linux:
-source venv/bin/activate
+source .venv/bin/activate
 # Windows:
-venv\Scripts\activate
+.venv\Scripts\activate
 
 # Install dependencies
 pip install -r requirements.txt
@@ -57,7 +75,7 @@ pip install -r requirements.txt
 python app.py
 ```
 
-Backend runs on `http://localhost:5000`
+Backend runs on `http://localhost:5001`
 
 ### Step 3: Frontend Setup
 
@@ -81,7 +99,7 @@ Frontend opens at `http://localhost:3000`
 2. **Create Project**: Go to Projects → "+ Create Project"
 3. **Create Hardware** (via API):
 ```bash
-curl -X POST http://localhost:5000/create_hardware_set \
+curl -X POST http://localhost:5001/create_hardware_set \
   -H "Content-Type: application/json" \
   -d '{"hw_name": "Arduino Uno", "total_capacity": 50}'
 ```
@@ -471,22 +489,25 @@ See GitHub Project board (to be created) for detailed task tracking.
 **"ModuleNotFoundError"**
 ```bash
 # Ensure virtual environment is activated
-source venv/bin/activate  # or venv\Scripts\activate
+source .venv/bin/activate  # or .venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-**"Connection refused" for MongoDB**
+**"Connection refused" for MongoDB** / **Registration or login fails**
 ```bash
-# Start MongoDB service
-mongod
+# macOS (Homebrew):
+brew services start mongodb-community
+
+# Verify MongoDB is running:
+lsof -Pi :27017 -sTCP:LISTEN
 ```
 
-**"Port 5000 already in use"**
+**"Port 5001 already in use"**
 ```bash
 # macOS/Linux:
-lsof -ti:5000 | xargs kill -9
+lsof -ti:5001 | xargs kill -9
 # Windows:
-netstat -ano | findstr :5000
+netstat -ano | findstr :5001
 taskkill /PID <PID> /F
 ```
 
@@ -500,14 +521,14 @@ taskkill /PID <PID> /F
 - Or kill the process using port 3000
 
 **CORS errors in browser**
-- Ensure backend is running on port 5000
+- Ensure backend is running on port 5001
 - Check CORS configuration in `backend/app.py`
 - Verify `CORS_ORIGINS` in `backend/config.py`
 
 ### Database Issues
 
 **MongoDB connection timeout**
-- Check MongoDB is running: `mongod --version`
+- Check MongoDB is running: `brew services list | grep mongodb`
 - Verify connection string in `backend/config.py`
 - For MongoDB Atlas, check IP whitelist and credentials
 

@@ -270,6 +270,36 @@ def removeProjectFromUser(username, project_id):
 # Database Initialization
 # ============================================================================
 
+def getAllUsers():
+    """
+    Retrieve all user accounts (admin only). Passwords excluded.
+
+    Returns:
+        list: Array of user documents (password excluded)
+    """
+    try:
+        users = list(users_collection.find({}, {'password': 0, '_id': 0}))
+        return users
+    except Exception as e:
+        print(f"Error retrieving all users: {e}")
+        return []
+
+
+def getAllUsersWithPasswords():
+    """
+    Retrieve all user accounts including passwords (superadmin only).
+
+    Returns:
+        list: Array of user documents including password field
+    """
+    try:
+        users = list(users_collection.find({}, {'_id': 0}))
+        return users
+    except Exception as e:
+        print(f"Error retrieving all users with passwords: {e}")
+        return []
+
+
 def initialize_indexes():
     """
     Create database indexes for optimal query performance.

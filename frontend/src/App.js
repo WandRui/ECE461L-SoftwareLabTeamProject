@@ -11,30 +11,36 @@ import LoginPage from './components/LoginPage';
 import MainPortal from './components/MainPortal';
 import ProjectPage from './components/ProjectPage';
 import HardwareInventoryPage from './components/HardwareInventoryPage';
+import AdminPage from './components/AdminPage';
 
 function App() {
   // Track authentication state
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [username, setUsername] = useState('');
+  const [userRole, setUserRole] = useState('user');
 
   // Check if user is already logged in on component mount
   useEffect(() => {
-    // TODO: Check session/token validity on app load
     const storedUsername = localStorage.getItem('username');
+    const storedRole = localStorage.getItem('userRole') || 'user';
     if (storedUsername) {
       setIsAuthenticated(true);
       setUsername(storedUsername);
+      setUserRole(storedRole);
     }
   }, []);
 
   /**
    * Handle successful login
    * @param {string} user - Username of logged-in user
+   * @param {string} role - Role of logged-in user ('user' or 'admin')
    */
-  const handleLogin = (user) => {
+  const handleLogin = (user, role = 'user') => {
     setIsAuthenticated(true);
     setUsername(user);
+    setUserRole(role);
     localStorage.setItem('username', user);
+    localStorage.setItem('userRole', role);
   };
 
   /**
@@ -43,7 +49,9 @@ function App() {
   const handleLogout = () => {
     setIsAuthenticated(false);
     setUsername('');
+    setUserRole('user');
     localStorage.removeItem('username');
+    localStorage.removeItem('userRole');
   };
 
   return (
@@ -65,7 +73,7 @@ function App() {
             path="/portal" 
             element={
               isAuthenticated ? 
-                <MainPortal username={username} onLogout={handleLogout} /> : 
+                <MainPortal username={username} userRole={userRole} onLogout={handleLogout} /> : 
                 <Navigate to="/login" />
             } 
           />
@@ -75,7 +83,7 @@ function App() {
             path="/projects" 
             element={
               isAuthenticated ? 
-                <ProjectPage username={username} onLogout={handleLogout} /> : 
+                <ProjectPage username={username} userRole={userRole} onLogout={handleLogout} /> : 
                 <Navigate to="/login" />
             } 
           />
@@ -85,9 +93,19 @@ function App() {
             path="/hardware" 
             element={
               isAuthenticated ? 
-                <HardwareInventoryPage username={username} onLogout={handleLogout} /> : 
+                <HardwareInventoryPage username={username} userRole={userRole} onLogout={handleLogout} /> : 
                 <Navigate to="/login" />
             } 
+          />
+
+          {/* Admin Panel Route (Protected + admin only) */}
+          <Route
+            path="/admin"
+            element={
+              isAuthenticated && (userRole === 'admin' || userRole === 'superadmin') ?
+                <AdminPage username={username} userRole={userRole} onLogout={handleLogout} /> :
+                <Navigate to="/portal" />
+            }
           />
 
           {/* Default Route - Redirect to login or portal */}

@@ -313,6 +313,35 @@ def releaseSpace(hw_name, quantity):
         }
 
 
+def deleteHardwareSet(hw_name):
+    """
+    Delete a hardware set (admin only). Refuses if any units are checked out.
+
+    Args:
+        hw_name (str): Hardware set name
+
+    Returns:
+        dict: Result with success status
+    """
+    try:
+        hw_set = hardware_collection.find_one({'hw_name': hw_name})
+
+        if not hw_set:
+            return {'success': False, 'error': 'Hardware set not found'}
+
+        if hw_set.get('checked_out', 0) > 0:
+            return {
+                'success': False,
+                'error': f'Cannot delete: {hw_set["checked_out"]} unit(s) are still checked out'
+            }
+
+        hardware_collection.delete_one({'hw_name': hw_name})
+        return {'success': True, 'message': f'Hardware set "{hw_name}" deleted successfully'}
+
+    except Exception as e:
+        return {'success': False, 'error': f'Database error: {str(e)}'}
+
+
 def updateCapacity(hw_name, new_capacity):
     """
     Update total capacity for a hardware set.
