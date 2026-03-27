@@ -20,7 +20,7 @@ from pymongo import MongoClient
 from datetime import datetime
 import config
 
-client = MongoClient(config.MONGO_URI)
+client = MongoClient(config.MONGO_URI, tlsCAFile=config.MONGO_TLS_CA_FILE)
 db = client[config.DATABASE_NAME]
 hardware_collection = db[config.HARDWARE_COLLECTION]
 users_collection    = db[config.USERS_COLLECTION]

@@ -16,7 +16,7 @@ from datetime import datetime
 import config
 
 # Initialize MongoDB connection
-client = MongoClient(config.MONGO_URI)
+client = MongoClient(config.MONGO_URI, tlsCAFile=config.MONGO_TLS_CA_FILE)
 db = client[config.DATABASE_NAME]
 projects_collection = db[config.PROJECTS_COLLECTION]
 

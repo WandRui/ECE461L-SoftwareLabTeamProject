@@ -9,10 +9,13 @@ Never commit actual secret keys or passwords to version control.
 """
 
 import os
+import certifi
 from datetime import timedelta
 from dotenv import load_dotenv
 
 load_dotenv()
+
+MONGO_TLS_CA_FILE = certifi.where()
 
 # ============================================================================
 # Flask Configuration
