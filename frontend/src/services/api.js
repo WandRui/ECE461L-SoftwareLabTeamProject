@@ -9,7 +9,7 @@ import axios from 'axios';
 
 // Create axios instance with default config
 const api = axios.create({
-  baseURL: 'http://localhost:5001',  // Flask backend URL
+  baseURL: process.env.REACT_APP_API_URL || 'http://localhost:5001',
   timeout: 10000,                    // 10 second timeout
   withCredentials: true,             // Send cookies with requests
   headers: {

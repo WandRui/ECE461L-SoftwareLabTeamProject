@@ -24,13 +24,19 @@ app.config['SECRET_KEY'] = config.SECRET_KEY
 app.config['SESSION_TYPE'] = 'filesystem'
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=24)
 
-# Enable CORS for frontend communication
-CORS(app, origins=['http://localhost:3000'], supports_credentials=True)
+import os
+
+allowed_origins = ['http://localhost:3000']
+cors_origin = os.environ.get('CORS_ORIGIN')
+if cors_origin:
+    allowed_origins.append(cors_origin)
+
+CORS(app, origins=allowed_origins, supports_credentials=True)
 
 @app.after_request
 def add_cors_headers(response):
     origin = request.headers.get('Origin')
-    if origin in ['http://localhost:3000']:
+    if origin in allowed_origins:
         response.headers['Access-Control-Allow-Origin'] = origin
         response.headers['Access-Control-Allow-Credentials'] = 'true'
         response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'

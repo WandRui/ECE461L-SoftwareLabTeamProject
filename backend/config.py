@@ -10,6 +10,9 @@ Never commit actual secret keys or passwords to version control.
 
 import os
 from datetime import timedelta
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # ============================================================================
 # Flask Configuration
