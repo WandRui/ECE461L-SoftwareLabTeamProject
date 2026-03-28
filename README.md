@@ -2,7 +2,10 @@
 
 A full-stack web application for managing hardware lab resources, enabling users to create projects, manage team collaborations, and check out/check in hardware equipment.
 
+**Live Demo**: [https://hardware-lab-frontend.onrender.com](https://hardware-lab-frontend.onrender.com)
+
 ## 📋 Table of Contents
+- [Live Deployment](#-live-deployment)
 - [Quick Start](#-quick-start)
 - [System Architecture](#️-system-architecture)
 - [Project Structure](#-project-structure)
@@ -11,7 +14,33 @@ A full-stack web application for managing hardware lab resources, enabling users
 - [Features](#-features)
 - [API Endpoints](#-api-endpoints)
 - [Development Workflow](#-development-workflow)
+- [Deployment](#-deployment)
 - [Troubleshooting](#-troubleshooting)
+
+---
+
+## 🌐 Live Deployment
+
+The application is deployed and accessible online:
+
+- **Frontend**: https://hardware-lab-frontend.onrender.com
+- **Backend API**: https://hardware-lab-backend.onrender.com
+
+### Deployment Platform
+- **Render**: Cloud platform for hosting web services and static sites
+- **Database**: MongoDB Atlas (cloud-hosted)
+
+### Environment Variables (Production)
+The following environment variables are configured on Render:
+
+| Variable | Description |
+|----------|-------------|
+| `MONGO_URI` | MongoDB Atlas connection string |
+| `DATABASE_NAME` | Database name (`hardware_lab_system`) |
+| `FLASK_ENV` | Flask environment (`production`) |
+| `CORS_ORIGIN` | Allowed frontend origin |
+| `SECRET_KEY` | Flask session secret key |
+| `REACT_APP_API_URL` | Backend API URL for frontend |
 
 ---
 
@@ -44,7 +73,7 @@ Stop MongoDB:
 brew services stop mongodb-community
 ```
 
-**Option B: 直接启动（非 Homebrew）**
+**Option B: Direct Start (Non-Homebrew)**
 ```bash
 mongod --dbpath /usr/local/var/mongodb
 ```
@@ -139,6 +168,7 @@ ECE461L-SoftwareLabTeamProject/
 │   ├── app.py                   # Main Flask application & API routes
 │   ├── config.py                # Configuration settings (DB connection, secrets)
 │   ├── requirements.txt         # Python dependencies
+│   ├── seed_data.py            # Database seeding script for hardware sets
 │   │
 │   ├── database/                # Database modules
 │   │   ├── __init__.py
@@ -168,7 +198,8 @@ ECE461L-SoftwareLabTeamProject/
 │   │   │   ├── LoginPage.js
 │   │   │   ├── MainPortal.js
 │   │   │   ├── ProjectPage.js
-│   │   │   └── HardwareInventoryPage.js
+│   │   │   ├── HardwareInventoryPage.js
+│   │   │   └── AdminPage.js   # Admin dashboard for hardware management
 │   │   │
 │   │   ├── services/           # API communication layer
 │   │   │   ├── api.js          # Base API configuration
@@ -190,6 +221,9 @@ ECE461L-SoftwareLabTeamProject/
 │   └── images/
 │       └── system-architecture-diagram.png
 │
+├── render.yaml                  # Render deployment configuration
+├── startup.sh                   # Development startup script
+├── shutdown.sh                  # Development shutdown script
 ├── .gitignore
 └── README.md                    # This file
 ```
@@ -197,21 +231,26 @@ ECE461L-SoftwareLabTeamProject/
 ### File Statistics
 
 **Backend (Python)**
-- Total Files: 13 Python files (~2,800 lines)
-- `app.py`: 500+ lines (all API endpoints)
+- Total Files: 14 Python files (~2,900 lines)
+- `app.py`: 600+ lines (all API endpoints)
 - Database modules: 1,050+ lines
 - Models: 550+ lines
 - Utilities: 350+ lines
+- `seed_data.py`: 100+ lines (hardware data seeding)
 
 **Frontend (JavaScript/React)**
-- Total Files: 13 JavaScript files (~2,200 lines)
-- React components: 1,150+ lines
+- Total Files: 14 JavaScript files (~2,400 lines)
+- React components: 1,300+ lines (including AdminPage)
 - Services (API): 470+ lines
 - App & routing: 250+ lines
 
 **Documentation**
 - Total Files: 9 markdown files (~2,000 lines)
 - Complete API specs, architecture docs, user stories
+
+**Deployment**
+- `render.yaml`: Render deployment configuration
+- `startup.sh` / `shutdown.sh`: Development utility scripts
 
 ---
 
@@ -312,6 +351,12 @@ Manages hardware inventory:
 - `checkOut(projectId, hwName, quantity)`
 - `checkIn(projectId, hwName, quantity)`
 
+**`components/AdminPage.js`**
+- Admin dashboard for hardware set management
+- Create new hardware sets with capacity configuration
+- View all hardware inventory with availability status
+- Delete hardware sets from inventory
+
 ---
 
 ## 🗄️ Database Schema (MongoDB)
@@ -382,11 +427,18 @@ See `docs/database-schema.md` for detailed schema documentation with indexes, va
 - Check out hardware for projects
 - Return hardware to inventory
 - Prevent over-allocation
+- Real-time availability updates
 
 ### Feature 5: Frontend Dashboard
 - Intuitive user interface
 - Project and hardware overview
 - Easy navigation between views
+
+### Feature 6: Admin Management
+- Admin dashboard for hardware set creation
+- Configure hardware capacity and availability
+- Delete hardware sets from inventory
+- View all hardware inventory status
 
 See `docs/user-stories.md` for complete user stories, acceptance criteria, and sprint planning.
 
@@ -464,6 +516,14 @@ npm start
 ### Current Work Items
 See GitHub Project board (to be created) for detailed task tracking.
 
+### Completed Items
+- Deploy application to Render cloud platform
+- Configure production CORS and session management
+- Implement SSL certificate verification for MongoDB Atlas
+- Add Admin Page for hardware set management
+- Add database seeding script for initial hardware data
+- Increase API timeout to handle cold starts on free tier
+
 ### Technical Debt & TODOs
 - Implement password hashing (bcrypt/argon2)
 - Add role-based access control (admin vs user)
@@ -479,6 +539,85 @@ See GitHub Project board (to be created) for detailed task tracking.
 - MongoDB document structure optimization
 - React state management (Context API vs Redux)
 - Concurrency control strategies for checkout operations
+
+---
+
+## 🚀 Deployment
+
+### Render Deployment
+
+This application is configured for deployment on [Render](https://render.com/).
+
+#### Prerequisites
+- Render account (free tier available)
+- MongoDB Atlas account (free tier available)
+
+#### Configuration Files
+
+**`render.yaml`** - Render Blueprint for infrastructure-as-code deployment:
+```yaml
+services:
+  # Flask Backend
+  - type: web
+    name: hardware-lab-backend
+    runtime: python
+    plan: free
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT
+    envVars:
+      - key: MONGO_URI
+        sync: false
+      - key: DATABASE_NAME
+        value: hardware_lab_system
+      - key: FLASK_ENV
+        value: production
+      - key: CORS_ORIGIN
+        sync: false
+      - key: SECRET_KEY
+        generateValue: true
+
+  # React Frontend
+  - type: web
+    name: hardware-lab-frontend
+    runtime: static
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: build
+    envVars:
+      - key: REACT_APP_API_URL
+        sync: false
+```
+
+#### Deployment Steps
+
+1. **Create MongoDB Atlas Cluster**:
+   - Sign up at [MongoDB Atlas](https://www.mongodb.com/cloud/atlas)
+   - Create a free shared cluster
+   - Configure database access (username/password)
+   - Add IP whitelist (0.0.0.0/0 for Render)
+   - Copy the connection string
+
+2. **Deploy on Render**:
+   - Connect your GitHub repository to Render
+   - Use the Blueprint option with `render.yaml`
+   - Set environment variables in Render dashboard:
+     - `MONGO_URI`: Your MongoDB Atlas connection string
+     - `CORS_ORIGIN`: Frontend URL (e.g., `https://hardware-lab-frontend.onrender.com`)
+     - `REACT_APP_API_URL`: Backend URL (e.g., `https://hardware-lab-backend.onrender.com`)
+
+3. **Seed Database** (optional):
+   ```bash
+   # Run locally or via Render Shell
+   python seed_data.py
+   ```
+
+#### Production Considerations
+
+- **Cold Starts**: Free tier services may experience cold starts (increased API timeout to 120s)
+- **SSL/TLS**: MongoDB Atlas requires SSL certificate verification (`certifi` package included)
+- **CORS**: Production CORS origins are configured via environment variables
+- **Session Cookies**: `SameSite=None` and `Secure` flags for cross-origin sessions
 
 ---
 
@@ -547,14 +686,15 @@ taskkill /PID <PID> /F
 
 ## 📊 Project Statistics
 
-- **Total Files**: 35+ files
-- **Total Lines of Code**: ~7,000+ lines
-- **Backend**: ~2,800 lines (Python)
-- **Frontend**: ~2,200 lines (JavaScript/React)
-- **Documentation**: ~2,000 lines (Markdown)
-- **Languages**: Python, JavaScript, HTML, CSS, Markdown
+- **Total Files**: 40+ files
+- **Total Lines of Code**: ~7,500+ lines
+- **Backend**: ~2,900 lines (Python)
+- **Frontend**: ~2,400 lines (JavaScript/React)
+- **Documentation**: ~2,100 lines (Markdown)
+- **Languages**: Python, JavaScript, HTML, CSS, Markdown, YAML
 - **Frameworks**: Flask, React
-- **Database**: MongoDB
+- **Database**: MongoDB (Atlas Cloud)
+- **Deployment**: Render (Cloud Platform)
 
 ---
 
@@ -572,5 +712,5 @@ taskkill /PID <PID> /F
 
 ---
 
-**Last Updated**: 2026-02-13  
-**Status**: Initial architecture complete, ready for development
+**Last Updated**: 2026-03-28  
+**Status**: Fully deployed on Render, production-ready
