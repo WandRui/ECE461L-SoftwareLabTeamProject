@@ -16,6 +16,7 @@ from flask import Flask, request, jsonify, session
 from flask_cors import CORS
 from datetime import timedelta
 import config
+import os
 from database import usersDB, projectsDB, hardwareDB
 
 # Initialize Flask application
@@ -23,8 +24,12 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = config.SECRET_KEY
 app.config['SESSION_TYPE'] = 'filesystem'
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=24)
-app.config['SESSION_COOKIE_SAMESITE'] = 'None'
-app.config['SESSION_COOKIE_SECURE'] = True
+# Auto-configure cookie settings based on environment
+# Development (HTTP localhost): SECURE=False, SAMESITE=Lax
+# Production (HTTPS): SECURE=True, SAMESITE=None
+IS_PRODUCTION = os.environ.get('FLASK_ENV') == 'production' or os.environ.get('RENDER') == 'true'
+app.config['SESSION_COOKIE_SAMESITE'] = 'None' if IS_PRODUCTION else 'Lax'
+app.config['SESSION_COOKIE_SECURE'] = IS_PRODUCTION  # True in production (HTTPS), False in dev (HTTP)
 
 import os
 

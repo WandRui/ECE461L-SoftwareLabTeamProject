@@ -3,10 +3,59 @@
  * ==================================
  * Displays available hardware sets with real-time availability.
  * Allows users to check out and check in hardware for their projects.
+ * Uses Material UI components for a modern, beautiful UI.
  */
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import {
+  AppBar,
+  Toolbar,
+  Typography,
+  Button,
+  Box,
+  Container,
+  Grid,
+  Card,
+  CardContent,
+  CardActions,
+  Avatar,
+  Chip,
+  IconButton,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  Alert,
+  CircularProgress,
+  Divider,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  LinearProgress,
+  Paper,
+  Stack,
+  Tooltip,
+  Menu,
+  ListItemIcon,
+  ListItemText,
+} from '@mui/material';
+import {
+  Build as BuildIcon,
+  ArrowBack as ArrowBackIcon,
+  Logout as LogoutIcon,
+  Add as AddIcon,
+  Close as CloseIcon,
+  Inventory as InventoryIcon,
+  CheckCircle as CheckCircleIcon,
+  RemoveCircle as RemoveCircleIcon,
+  Delete as DeleteIcon,
+  MoreVert as MoreVertIcon,
+  Person as PersonIcon,
+  AdminPanelSettings as AdminIcon,
+} from '@mui/icons-material';
 import { getHardwareSets, checkOutHardware, checkInHardware, createHardwareSet, deleteHardwareSet } from '../services/hardwareService';
 import { getUserProjects } from '../services/projectService';
 
@@ -25,22 +74,24 @@ function HardwareInventoryPage({ username, userRole, onLogout }) {
   const [selectedProject, setSelectedProject] = useState('');
   const [quantity, setQuantity] = useState('');
   const [isCheckoutMode, setIsCheckoutMode] = useState(true);
+  const [formLoading, setFormLoading] = useState(false);
 
-  // Create hardware set form state
-  const [showCreateForm, setShowCreateForm] = useState(false);
+  // Create hardware set dialog state
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [newHwName, setNewHwName] = useState('');
   const [newHwCapacity, setNewHwCapacity] = useState('');
   const [newHwDescription, setNewHwDescription] = useState('');
   const [createLoading, setCreateLoading] = useState(false);
+
+  // Menu state for admin actions
+  const [menuAnchorEl, setMenuAnchorEl] = useState(null);
+  const [menuHardware, setMenuHardware] = useState(null);
 
   // Load hardware sets and projects on component mount
   useEffect(() => {
     loadData();
   }, []);
 
-  /**
-   * Load hardware sets and user projects
-   */
   const loadData = async () => {
     try {
       setLoading(true);
@@ -66,9 +117,6 @@ function HardwareInventoryPage({ username, userRole, onLogout }) {
     }
   };
 
-  /**
-   * Handle hardware checkout
-   */
   const handleCheckout = async (e) => {
     e.preventDefault();
     setError('');
@@ -90,6 +138,7 @@ function HardwareInventoryPage({ username, userRole, onLogout }) {
     }
 
     try {
+      setFormLoading(true);
       const response = await checkOutHardware(
         selectedProject,
         selectedHardware.hw_name,
@@ -100,19 +149,18 @@ function HardwareInventoryPage({ username, userRole, onLogout }) {
         setSelectedHardware(null);
         setQuantity('');
         setSelectedProject('');
-        loadData(); // Reload hardware list
+        loadData();
       } else {
         setError(response.error || 'Failed to checkout hardware');
       }
     } catch (err) {
       setError('An error occurred during checkout');
       console.error('Checkout error:', err);
+    } finally {
+      setFormLoading(false);
     }
   };
 
-  /**
-   * Handle hardware check-in
-   */
   const handleCheckin = async (e) => {
     e.preventDefault();
     setError('');
@@ -129,6 +177,7 @@ function HardwareInventoryPage({ username, userRole, onLogout }) {
     }
 
     try {
+      setFormLoading(true);
       const response = await checkInHardware(
         selectedProject,
         selectedHardware.hw_name,
@@ -139,19 +188,18 @@ function HardwareInventoryPage({ username, userRole, onLogout }) {
         setSelectedHardware(null);
         setQuantity('');
         setSelectedProject('');
-        loadData(); // Reload hardware list
+        loadData();
       } else {
         setError(response.error || 'Failed to check in hardware');
       }
     } catch (err) {
       setError('An error occurred during check-in');
       console.error('Check-in error:', err);
+    } finally {
+      setFormLoading(false);
     }
   };
 
-  /**
-   * Handle creating a new hardware set
-   */
   const handleCreateHardware = async (e) => {
     e.preventDefault();
     setError('');
@@ -172,7 +220,7 @@ function HardwareInventoryPage({ username, userRole, onLogout }) {
     try {
       const response = await createHardwareSet(newHwName.trim(), capacity, newHwDescription.trim());
       if (response.success) {
-        setShowCreateForm(false);
+        setShowCreateDialog(false);
         setNewHwName('');
         setNewHwCapacity('');
         setNewHwDescription('');
@@ -187,12 +235,10 @@ function HardwareInventoryPage({ username, userRole, onLogout }) {
     }
   };
 
-  /**
-   * Handle deleting a hardware set (admin only)
-   */
   const handleDeleteHardware = async (hwName) => {
     if (!window.confirm(`Delete hardware set "${hwName}"? This cannot be undone.`)) return;
     setError('');
+    setMenuAnchorEl(null);
     try {
       const response = await deleteHardwareSet(hwName);
       if (response.success) {
@@ -205,26 +251,8 @@ function HardwareInventoryPage({ username, userRole, onLogout }) {
     }
   };
 
-  /**
-   * Compute how many units of each hardware the current user holds
-   * across all their projects.
-   * Returns a map: { hw_name -> total_qty }
-   */
-  const getUserCheckedOutMap = () => {
-    const map = {};
-    projects.forEach((project) => {
-      (project.hardware_checkouts || []).forEach((item) => {
-        map[item.hw_name] = (map[item.hw_name] || 0) + item.quantity;
-      });
-    });
-    return map;
-  };
+  
 
-  const userCheckedOutMap = getUserCheckedOutMap();
-
-  /**
-   * Open checkout/checkin form for a hardware set
-   */
   const openForm = (hardware, isCheckout) => {
     setSelectedHardware(hardware);
     setIsCheckoutMode(isCheckout);
@@ -233,506 +261,388 @@ function HardwareInventoryPage({ username, userRole, onLogout }) {
     setSelectedProject('');
   };
 
+  const handleMenuOpen = (event, hardware) => {
+    setMenuAnchorEl(event.currentTarget);
+    setMenuHardware(hardware);
+  };
+
+  const handleMenuClose = () => {
+    setMenuAnchorEl(null);
+    setMenuHardware(null);
+  };
+
+  // Calculate availability percentage for progress bar
+  const getAvailabilityPercent = (hardware) => {
+    return Math.round((hardware.available / hardware.total_capacity) * 100);
+  };
+
   return (
-    <div className="hardware-page">
-      {/* Header */}
-      <header className="page-header">
-        <div className="header-left">
-          <button onClick={() => navigate('/portal')} className="back-btn">← Back</button>
-          <h1>Hardware Inventory</h1>
-        </div>
-        <div className="header-right">
-          {isAdmin && (
-            <button onClick={() => { setShowCreateForm(true); setError(''); }} className="create-btn">
-              + Add Hardware Set
-            </button>
-          )}
-          <span className="username-label">
-            {username}{isAdmin && <span className="admin-badge"> (Admin)</span>}
-          </span>
-          <button onClick={onLogout} className="logout-btn">Logout</button>
-        </div>
-      </header>
+    <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
+      {/* Header/AppBar */}
+      <AppBar
+        position="static"
+        sx={{
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)',
+        }}
+      >
+        <Toolbar sx={{ py: 1 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', flexGrow: 1 }}>
+            <Button
+              startIcon={<ArrowBackIcon />}
+              onClick={() => navigate('/portal')}
+              sx={{
+                color: 'white',
+                bgcolor: 'rgba(255, 255, 255, 0.2)',
+                mr: 2,
+                '&:hover': {
+                  bgcolor: 'rgba(255, 255, 255, 0.3)',
+                },
+              }}
+            >
+              Back
+            </Button>
+            <BuildIcon sx={{ mr: 1, fontSize: 28 }} />
+            <Typography variant="h5" sx={{ fontWeight: 700, color: 'white' }}>
+              Hardware Inventory
+            </Typography>
+          </Box>
 
-      <main className="page-content">
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            {isAdmin && (
+              <Button
+                variant="contained"
+                startIcon={<AddIcon />}
+                onClick={() => setShowCreateDialog(true)}
+                sx={{
+                  bgcolor: 'white',
+                  color: 'primary.main',
+                  fontWeight: 600,
+                  '&:hover': {
+                    bgcolor: 'rgba(255, 255, 255, 0.9)',
+                  },
+                }}
+              >
+                Add Hardware
+              </Button>
+            )}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Typography variant="body1" sx={{ color: 'white' }}>
+                {username}
+              </Typography>
+              {isAdmin && (
+                <Chip
+                  icon={<AdminIcon />}
+                  label="Admin"
+                  size="small"
+                  sx={{
+                    bgcolor: 'rgba(255, 255, 255, 0.25)',
+                    color: 'white',
+                    fontWeight: 600,
+                  }}
+                />
+              )}
+            </Box>
+            <Button
+              variant="contained"
+              startIcon={<LogoutIcon />}
+              onClick={onLogout}
+              sx={{
+                bgcolor: 'white',
+                color: 'primary.main',
+                fontWeight: 600,
+                '&:hover': {
+                  bgcolor: 'rgba(255, 255, 255, 0.9)',
+                },
+              }}
+            >
+              Logout
+            </Button>
+          </Box>
+        </Toolbar>
+      </AppBar>
+
+      {/* Main Content */}
+      <Container maxWidth="xl" sx={{ py: 4 }}>
         {/* Error Message */}
-        {error && <div className="error-message">{error}</div>}
-
-        {/* Create Hardware Set Modal */}
-        {showCreateForm && (
-          <div className="form-overlay" onClick={() => setShowCreateForm(false)}>
-            <div className="form-modal" onClick={(e) => e.stopPropagation()}>
-              <h3>Create Hardware Set</h3>
-              <form onSubmit={handleCreateHardware}>
-                <div className="form-group">
-                  <label>Hardware Name:</label>
-                  <input
-                    type="text"
-                    value={newHwName}
-                    onChange={(e) => setNewHwName(e.target.value)}
-                    placeholder="e.g. Arduino Uno"
-                    required
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Total Capacity:</label>
-                  <input
-                    type="number"
-                    value={newHwCapacity}
-                    onChange={(e) => setNewHwCapacity(e.target.value)}
-                    placeholder="e.g. 50"
-                    min="1"
-                    required
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Description (optional):</label>
-                  <input
-                    type="text"
-                    value={newHwDescription}
-                    onChange={(e) => setNewHwDescription(e.target.value)}
-                    placeholder="e.g. Microcontroller board"
-                  />
-                </div>
-                <div className="form-buttons">
-                  <button type="submit" className="primary-btn" disabled={createLoading}>
-                    {createLoading ? 'Creating...' : 'Create'}
-                  </button>
-                  <button type="button" onClick={() => setShowCreateForm(false)} className="cancel-btn">
-                    Cancel
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
+        {error && (
+          <Alert severity="error" sx={{ mb: 3 }}>
+            {error}
+          </Alert>
         )}
 
-        {/* Checkout/Checkin Form */}
-        {selectedHardware && (
-          <div className="form-overlay" onClick={() => setSelectedHardware(null)}>
-            <div className="form-modal" onClick={(e) => e.stopPropagation()}>
-              <h3>{isCheckoutMode ? 'Check Out' : 'Check In'} {selectedHardware.hw_name}</h3>
-              <form onSubmit={isCheckoutMode ? handleCheckout : handleCheckin}>
-                <div className="form-group">
-                  <label>Select Project:</label>
-                  <select
-                    value={selectedProject}
-                    onChange={(e) => setSelectedProject(e.target.value)}
-                    required
-                  >
-                    <option value="">-- Select Project --</option>
-                    {projects.map((project) => (
-                      <option key={project.id} value={project.id}>
-                        {project.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="form-group">
-                  <label>Quantity:</label>
-                  <input
-                    type="number"
-                    value={quantity}
-                    onChange={(e) => setQuantity(e.target.value)}
-                    min="1"
-                    max={isCheckoutMode ? selectedHardware.available : (userCheckedOutMap[selectedHardware.hw_name] || 0)}
-                    required
-                  />
-                  <small>
-                    {isCheckoutMode
-                      ? `Available: ${selectedHardware.available}`
-                      : `Your checked out: ${userCheckedOutMap[selectedHardware.hw_name] || 0}`}
-                  </small>
-                </div>
-
-                <div className="form-buttons">
-                  <button type="submit" className="primary-btn">
-                    {isCheckoutMode ? 'Check Out' : 'Check In'}
-                  </button>
-                  <button type="button" onClick={() => setSelectedHardware(null)} className="cancel-btn">
-                    Cancel
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
-
-        {/* Hardware List */}
+        {/* Loading State */}
         {loading ? (
-          <div className="loading">Loading hardware...</div>
+          <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}>
+            <CircularProgress size={50} />
+          </Box>
         ) : hardwareSets.length === 0 ? (
-          <div className="empty-state">
-            <p>No hardware sets available.</p>
-            <p>Click <strong>+ Create Hardware Set</strong> in the top right to add one.</p>
-          </div>
+          <Paper
+            sx={{
+              p: 6,
+              textAlign: 'center',
+              bgcolor: 'background.paper',
+              borderRadius: 3,
+            }}
+          >
+            <InventoryIcon sx={{ fontSize: 60, color: 'text.secondary', mb: 2 }} />
+            <Typography variant="h6" color="text.secondary" sx={{ mb: 1 }}>
+              No hardware sets available
+            </Typography>
+            {isAdmin ? (
+              <Typography variant="body2" color="text.secondary">
+                Click "Add Hardware" in the top right to create a new hardware set.
+              </Typography>
+            ) : (
+              <Typography variant="body2" color="text.secondary">
+                Contact an administrator to add hardware sets.
+              </Typography>
+            )}
+          </Paper>
         ) : (
-          <div className="hardware-grid">
+          <Grid container spacing={3}>
             {hardwareSets.map((hardware) => {
-              const myQty = userCheckedOutMap[hardware.hw_name] || 0;
+              const availabilityPercent = getAvailabilityPercent(hardware);
+
               return (
-              <div key={hardware.hw_name} className="hardware-card">
-                <h3>{hardware.hw_name}</h3>
-                <p className="description">{hardware.description || 'No description'}</p>
-
-                <div className="hardware-stats">
-                  <div className="stat">
-                    <span className="stat-label">Total:</span>
-                    <span className="stat-value">{hardware.total_capacity}</span>
-                  </div>
-                  <div className="stat">
-                    <span className="stat-label">Available:</span>
-                    <span className="stat-value available">{hardware.available}</span>
-                  </div>
-                  <div className="stat">
-                    <span className="stat-label">All Checked Out:</span>
-                    <span className="stat-value">{hardware.checked_out}</span>
-                  </div>
-                  <div className="stat">
-                    <span className="stat-label">My Usage:</span>
-                    <span className={`stat-value ${myQty > 0 ? 'my-usage' : ''}`}>{myQty}</span>
-                  </div>
-                </div>
-
-                <div className="availability-bar">
-                  <div
-                    className="availability-fill"
-                    style={{width: `${(hardware.available / hardware.total_capacity) * 100}%`}}
-                  ></div>
-                </div>
-
-                <div className="hardware-actions">
-                  <button
-                    onClick={() => openForm(hardware, true)}
-                    className="checkout-btn"
-                    disabled={hardware.available === 0}
+                <Grid item xs={12} sm={6} lg={4} xl={3} key={hardware.hw_name}>
+                  <Card
+                    sx={{
+                      height: '100%',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      transition: 'transform 0.2s, box-shadow 0.2s',
+                      '&:hover': {
+                        transform: 'translateY(-4px)',
+                        boxShadow: '0 8px 30px rgba(102, 126, 234, 0.2)',
+                      },
+                    }}
                   >
-                    Check Out
-                  </button>
-                  <button
-                    onClick={() => openForm(hardware, false)}
-                    className="checkin-btn"
-                    disabled={myQty === 0}
-                  >
-                    Check In
-                  </button>
-                  {isAdmin && (
-                    <button
-                      onClick={() => handleDeleteHardware(hardware.hw_name)}
-                      className="delete-btn"
-                      disabled={hardware.checked_out > 0}
-                      title={hardware.checked_out > 0
-                        ? `Cannot delete: ${hardware.checked_out} unit(s) still checked out`
-                        : 'Delete this hardware set'}
-                    >
-                      Delete
-                    </button>
-                  )}
-                </div>
-              </div>
+                    <CardContent sx={{ flexGrow: 1 }}>
+                      {/* Hardware Header */}
+                      <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
+                        <Avatar sx={{ bgcolor: 'primary.light', width: 50, height: 50 }}>
+                          <BuildIcon sx={{ color: 'white' }} />
+                        </Avatar>
+                        {isAdmin && (
+                          <IconButton onClick={(e) => handleMenuOpen(e, hardware)}>
+                            <MoreVertIcon />
+                          </IconButton>
+                        )}
+                      </Stack>
+
+                      <Typography variant="h5" sx={{ fontWeight: 600, color: 'primary.main', mb: 1 }}>
+                        {hardware.hw_name}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                        {hardware.description || 'No description'}
+                      </Typography>
+
+                      {/* Stats - Clean horizontal layout */}
+                      <Stack direction="row" spacing={2} sx={{ mb: 2, py: 1.5, px: 2, bgcolor: 'grey.50', borderRadius: 2 }}>
+                        <Box sx={{ textAlign: 'center', flex: 1 }}>
+                          <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }} noWrap>
+                            Total
+                          </Typography>
+                          <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                            {hardware.total_capacity}
+                          </Typography>
+                        </Box>
+                        <Box sx={{ textAlign: 'center', flex: 1 }}>
+                          <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }} noWrap>
+                            Available
+                          </Typography>
+                          <Typography variant="h6" sx={{ fontWeight: 600, color: hardware.available > 0 ? 'success.main' : 'error.main' }}>
+                            {hardware.available}
+                          </Typography>
+                        </Box>
+                        <Box sx={{ textAlign: 'center', flex: 1 }}>
+                          <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }} noWrap>
+                            In Use
+                          </Typography>
+                          <Typography variant="h6" sx={{ fontWeight: 600, color: 'warning.main' }}>
+                            {hardware.checked_out}
+                          </Typography>
+                        </Box>
+                      </Stack>
+
+                      {/* Availability Progress Bar */}
+                      <Box sx={{ mb: 2 }}>
+                        <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
+                          Availability: {availabilityPercent}%
+                        </Typography>
+                        <LinearProgress
+                          variant="determinate"
+                          value={availabilityPercent}
+                          sx={{
+                            height: 8,
+                            borderRadius: 4,
+                            bgcolor: 'grey.200',
+                            '& .MuiLinearProgress-bar': {
+                              borderRadius: 4,
+                              bgcolor: availabilityPercent > 50 ? 'success.main' : availabilityPercent > 20 ? 'warning.main' : 'error.main',
+                            },
+                          }}
+                        />
+                      </Box>
+                    </CardContent>
+
+                    {/* Action Buttons */}
+                    <Divider />
+                    <CardActions sx={{ justifyContent: 'center', py: 2, gap: 1 }}>
+                      <Button
+                        variant="contained"
+                        startIcon={<RemoveCircleIcon />}
+                        onClick={() => openForm(hardware, true)}
+                        disabled={hardware.available === 0}
+                        color="primary"
+                        size="small"
+                      >
+                        Check Out
+                      </Button>
+                      <Button
+                        variant="outlined"
+                        startIcon={<CheckCircleIcon />}
+                        onClick={() => openForm(hardware, false)}
+                        color="success"
+                        size="small"
+                      >
+                        Check In
+                      </Button>
+                    </CardActions>
+                  </Card>
+                </Grid>
               );
             })}
-          </div>
+          </Grid>
         )}
-      </main>
+      </Container>
 
-      {/* Inline Styles */}
-      <style jsx>{`
-        .hardware-page {
-          min-height: 100vh;
-          background: #f5f5f5;
-        }
+      {/* Create Hardware Dialog */}
+      <Dialog open={showCreateDialog} onClose={() => setShowCreateDialog(false)} maxWidth="sm" fullWidth>
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Typography variant="h6">Create Hardware Set</Typography>
+          <IconButton onClick={() => setShowCreateDialog(false)}>
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent>
+          <TextField
+            autoFocus
+            fullWidth
+            label="Hardware Name"
+            value={newHwName}
+            onChange={(e) => setNewHwName(e.target.value)}
+            placeholder="e.g. Arduino Uno"
+            required
+            sx={{ mt: 1, mb: 2 }}
+          />
+          <TextField
+            fullWidth
+            label="Total Capacity"
+            type="number"
+            value={newHwCapacity}
+            onChange={(e) => setNewHwCapacity(e.target.value)}
+            placeholder="e.g. 50"
+            required
+            sx={{ mb: 2 }}
+            InputProps={{ inputProps: { min: 1 } }}
+          />
+          <TextField
+            fullWidth
+            label="Description (optional)"
+            value={newHwDescription}
+            onChange={(e) => setNewHwDescription(e.target.value)}
+            placeholder="e.g. Microcontroller board"
+          />
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setShowCreateDialog(false)}>Cancel</Button>
+          <Button
+            variant="contained"
+            onClick={handleCreateHardware}
+            disabled={createLoading || !newHwName.trim() || !newHwCapacity}
+          >
+            {createLoading ? <CircularProgress size={24} /> : 'Create'}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
-        .page-header {
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-          color: white;
-          padding: 1.5rem 2rem;
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-        }
+      {/* Checkout/Checkin Dialog */}
+      <Dialog open={selectedHardware !== null} onClose={() => setSelectedHardware(null)} maxWidth="sm" fullWidth>
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Typography variant="h6">
+            {isCheckoutMode ? 'Check Out' : 'Check In'} {selectedHardware?.hw_name}
+          </Typography>
+          <IconButton onClick={() => setSelectedHardware(null)}>
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent>
+          <FormControl fullWidth sx={{ mt: 1, mb: 2 }}>
+            <InputLabel>Select Project</InputLabel>
+            <Select
+              value={selectedProject}
+              onChange={(e) => setSelectedProject(e.target.value)}
+              label="Select Project"
+              required
+            >
+              <MenuItem value="">-- Select Project --</MenuItem>
+              {projects.map((project) => (
+                <MenuItem key={project.id} value={project.id}>
+                  {project.name}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
 
-        .header-left {
-          display: flex;
-          align-items: center;
-          gap: 1rem;
-        }
+          <TextField
+            fullWidth
+            label="Quantity"
+            type="number"
+            value={quantity}
+            onChange={(e) => setQuantity(e.target.value)}
+            required
+            InputProps={{
+              inputProps: {
+                min: 1,
+                max: isCheckoutMode ? selectedHardware?.available : undefined,
+              },
+            }}
+            helperText={
+              isCheckoutMode
+                ? `Available: ${selectedHardware?.available}`
+                : 'Enter quantity to check in'
+            }
+          />
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setSelectedHardware(null)}>Cancel</Button>
+          <Button
+            variant="contained"
+            color={isCheckoutMode ? 'primary' : 'success'}
+            onClick={isCheckoutMode ? handleCheckout : handleCheckin}
+            disabled={formLoading || !selectedProject || !quantity}
+          >
+            {formLoading ? <CircularProgress size={24} /> : isCheckoutMode ? 'Check Out' : 'Check In'}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
-        .back-btn {
-          background: rgba(255, 255, 255, 0.2);
-          color: white;
-          border: none;
-          padding: 0.5rem 1rem;
-          border-radius: 5px;
-          cursor: pointer;
-        }
-
-        .header-right {
-          display: flex;
-          align-items: center;
-          gap: 1rem;
-        }
-
-        .username-label {
-          opacity: 0.9;
-          font-size: 0.95rem;
-        }
-
-        .create-btn {
-          background: white;
-          color: #667eea;
-          border: none;
-          padding: 0.5rem 1.25rem;
-          border-radius: 5px;
-          cursor: pointer;
-          font-weight: 600;
-          font-size: 0.9rem;
-          transition: background 0.2s;
-        }
-
-        .create-btn:hover {
-          background: #f0f0ff;
-        }
-
-        .logout-btn {
-          background: rgba(255, 255, 255, 0.2);
-          color: white;
-          border: none;
-          padding: 0.5rem 1rem;
-          border-radius: 5px;
-          cursor: pointer;
-        }
-
-        .page-content {
-          max-width: 1200px;
-          margin: 0 auto;
-          padding: 2rem;
-        }
-
-        .hardware-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-          gap: 1.5rem;
-        }
-
-        .hardware-card {
-          background: white;
-          padding: 1.5rem;
-          border-radius: 10px;
-          box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-        }
-
-        .hardware-card h3 {
-          color: #667eea;
-          margin-bottom: 0.5rem;
-        }
-
-        .description {
-          color: #666;
-          font-size: 0.9rem;
-          margin-bottom: 1rem;
-        }
-
-        .hardware-stats {
-          display: flex;
-          justify-content: space-between;
-          margin-bottom: 1rem;
-        }
-
-        .stat {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-        }
-
-        .stat-label {
-          font-size: 0.8rem;
-          color: #999;
-        }
-
-        .stat-value {
-          font-size: 1.5rem;
-          font-weight: bold;
-          color: #333;
-        }
-
-        .stat-value.available {
-          color: #4caf50;
-        }
-
-        .stat-value.my-usage {
-          color: #e53935;
-        }
-
-        .availability-bar {
-          height: 8px;
-          background: #e0e0e0;
-          border-radius: 4px;
-          overflow: hidden;
-          margin-bottom: 1rem;
-        }
-
-        .availability-fill {
-          height: 100%;
-          background: #4caf50;
-          transition: width 0.3s;
-        }
-
-        .hardware-actions {
-          display: flex;
-          gap: 0.5rem;
-        }
-
-        .checkout-btn, .checkin-btn {
-          flex: 1;
-          padding: 0.75rem;
-          border: none;
-          border-radius: 5px;
-          cursor: pointer;
-          font-size: 0.9rem;
-          transition: all 0.3s;
-        }
-
-        .checkout-btn {
-          background: #667eea;
-          color: white;
-        }
-
-        .checkout-btn:hover:not(:disabled) {
-          background: #5568d3;
-        }
-
-        .checkin-btn {
-          background: #4caf50;
-          color: white;
-        }
-
-        .checkin-btn:hover:not(:disabled) {
-          background: #45a049;
-        }
-
-        .checkout-btn:disabled, .checkin-btn:disabled {
-          opacity: 0.5;
-          cursor: not-allowed;
-        }
-
-        .delete-btn {
-          padding: 0.75rem 1rem;
-          background: #e53935;
-          color: white;
-          border: none;
-          border-radius: 5px;
-          cursor: pointer;
-          font-size: 0.9rem;
-          transition: background 0.3s;
-        }
-
-        .delete-btn:hover:not(:disabled) {
-          background: #c62828;
-        }
-
-        .delete-btn:disabled {
-          background: #e0e0e0;
-          color: #aaa;
-          cursor: not-allowed;
-        }
-
-        .admin-badge {
-          font-size: 0.75rem;
-          background: rgba(255,255,255,0.25);
-          padding: 0.1rem 0.4rem;
-          border-radius: 3px;
-          margin-left: 0.25rem;
-        }
-
-        .form-overlay {
-          position: fixed;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          background: rgba(0, 0, 0, 0.5);
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          z-index: 1000;
-        }
-
-        .form-modal {
-          background: white;
-          padding: 2rem;
-          border-radius: 10px;
-          max-width: 400px;
-          width: 90%;
-        }
-
-        .form-group {
-          margin-bottom: 1rem;
-        }
-
-        .form-group label {
-          display: block;
-          margin-bottom: 0.5rem;
-          font-weight: 600;
-        }
-
-        .form-group input, .form-group select {
-          width: 100%;
-          padding: 0.75rem;
-          border: 1px solid #ddd;
-          border-radius: 5px;
-          font-size: 1rem;
-        }
-
-        .form-group small {
-          display: block;
-          margin-top: 0.25rem;
-          color: #666;
-          font-size: 0.85rem;
-        }
-
-        .form-buttons {
-          display: flex;
-          gap: 0.5rem;
-          margin-top: 1.5rem;
-        }
-
-        .primary-btn {
-          flex: 1;
-          padding: 0.75rem;
-          background: #667eea;
-          color: white;
-          border: none;
-          border-radius: 5px;
-          cursor: pointer;
-        }
-
-        .cancel-btn {
-          flex: 1;
-          padding: 0.75rem;
-          background: #ddd;
-          color: #333;
-          border: none;
-          border-radius: 5px;
-          cursor: pointer;
-        }
-
-        .error-message {
-          background: #fee;
-          color: #c33;
-          padding: 1rem;
-          border-radius: 5px;
-          margin-bottom: 1rem;
-        }
-
-        .loading, .empty-state {
-          text-align: center;
-          padding: 3rem;
-          color: #666;
-        }
-      `}</style>
-    </div>
+      {/* Admin Menu */}
+      <Menu
+        anchorEl={menuAnchorEl}
+        open={Boolean(menuAnchorEl)}
+        onClose={handleMenuClose}
+      >
+        <MenuItem onClick={() => handleDeleteHardware(menuHardware?.hw_name)}>
+          <ListItemIcon>
+            <DeleteIcon color="error" />
+          </ListItemIcon>
+          <ListItemText>Delete Hardware Set</ListItemText>
+        </MenuItem>
+      </Menu>
+    </Box>
   );
 }
 

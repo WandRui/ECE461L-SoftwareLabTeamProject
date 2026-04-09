@@ -3,9 +3,32 @@
  * ====================
  * Handles user authentication (login and registration).
  * Provides forms for both login and registration with validation.
+ * Uses Material UI components for a modern, beautiful UI.
  */
 
 import React, { useState } from 'react';
+import {
+  Box,
+  Card,
+  CardContent,
+  TextField,
+  Button,
+  Typography,
+  Alert,
+  CircularProgress,
+  InputAdornment,
+  IconButton,
+  Divider,
+  Link,
+  Avatar,
+} from '@mui/material';
+import {
+  Person as PersonIcon,
+  Lock as LockIcon,
+  Visibility,
+  VisibilityOff,
+  Engineering as EngineeringIcon,
+} from '@mui/icons-material';
 import { login, register } from '../services/authService';
 
 function LoginPage({ onLogin }) {
@@ -16,6 +39,8 @@ function LoginPage({ onLogin }) {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   /**
    * Handle form submission for login or registration
@@ -84,172 +109,231 @@ function LoginPage({ onLogin }) {
     setIsLoginMode(!isLoginMode);
     setError('');
     setConfirmPassword('');
+    setShowPassword(false);
+    setShowConfirmPassword(false);
   };
 
   return (
-    <div className="login-page">
-      <div className="login-container">
-        <h1>Hardware Lab Management System</h1>
-        <h2>{isLoginMode ? 'Login' : 'Register'}</h2>
+    <Box
+      sx={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        padding: 2,
+      }}
+    >
+      <Card
+        sx={{
+          width: '100%',
+          maxWidth: 450,
+          borderRadius: 3,
+          overflow: 'visible',
+          position: 'relative',
+        }}
+      >
+        {/* Logo/Header Section */}
+        <Box
+          sx={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            pt: 4,
+            pb: 2,
+            px: 3,
+          }}
+        >
+          <Avatar
+            sx={{
+              width: 80,
+              height: 80,
+              bgcolor: 'primary.main',
+              mb: 2,
+              boxShadow: '0 8px 24px rgba(102, 126, 234, 0.4)',
+            }}
+          >
+            <EngineeringIcon sx={{ fontSize: 40 }} />
+          </Avatar>
+          <Typography
+            variant="h4"
+            component="h1"
+            sx={{
+              fontWeight: 700,
+              color: 'primary.main',
+              textAlign: 'center',
+            }}
+          >
+            Hardware Lab
+          </Typography>
+          <Typography
+            variant="body2"
+            color="text.secondary"
+            sx={{ mt: 1, textAlign: 'center' }}
+          >
+            Management System
+          </Typography>
+        </Box>
 
-        {error && <div className="error-message">{error}</div>}
+        <Divider sx={{ mx: 3 }} />
 
-        <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label htmlFor="username">Username:</label>
-            <input
-              type="text"
-              id="username"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              placeholder="Enter username"
-              disabled={loading}
-              required
-            />
-          </div>
+        <CardContent sx={{ pt: 3, px: 4, pb: 4 }}>
+          {/* Mode Title */}
+          <Typography
+            variant="h5"
+            component="h2"
+            sx={{
+              textAlign: 'center',
+              mb: 3,
+              fontWeight: 600,
+              color: 'text.primary',
+            }}
+          >
+            {isLoginMode ? 'Sign In' : 'Create Account'}
+          </Typography>
 
-          <div className="form-group">
-            <label htmlFor="password">Password:</label>
-            <input
-              type="password"
-              id="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Enter password"
-              disabled={loading}
-              required
-            />
-          </div>
-
-          {!isLoginMode && (
-            <div className="form-group">
-              <label htmlFor="confirmPassword">Confirm Password:</label>
-              <input
-                type="password"
-                id="confirmPassword"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="Confirm password"
-                disabled={loading}
-                required
-              />
-            </div>
+          {/* Error Alert */}
+          {error && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {error}
+            </Alert>
           )}
 
-          <button type="submit" disabled={loading}>
-            {loading ? 'Processing...' : (isLoginMode ? 'Login' : 'Register')}
-          </button>
-        </form>
+          {/* Form */}
+          <Box component="form" onSubmit={handleSubmit}>
+            {/* Username Field */}
+            <TextField
+              fullWidth
+              label="Username"
+              variant="outlined"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="Enter your username"
+              disabled={loading}
+              required
+              sx={{ mb: 2 }}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <PersonIcon color="action" />
+                  </InputAdornment>
+                ),
+              }}
+            />
 
-        <div className="toggle-mode">
-          <button onClick={toggleMode} disabled={loading}>
-            {isLoginMode ? 'Need an account? Register' : 'Have an account? Login'}
-          </button>
-        </div>
-      </div>
+            {/* Password Field */}
+            <TextField
+              fullWidth
+              label="Password"
+              variant="outlined"
+              type={showPassword ? 'text' : 'password'}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Enter your password"
+              disabled={loading}
+              required
+              sx={{ mb: isLoginMode ? 0 : 2 }}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <LockIcon color="action" />
+                  </InputAdornment>
+                ),
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton
+                      onClick={() => setShowPassword(!showPassword)}
+                      edge="end"
+                      disabled={loading}
+                    >
+                      {showPassword ? <VisibilityOff /> : <Visibility />}
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              }}
+            />
 
-      <style jsx>{`
-        .login-page {
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          min-height: 100vh;
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        }
+            {/* Confirm Password Field (Registration only) */}
+            {!isLoginMode && (
+              <TextField
+                fullWidth
+                label="Confirm Password"
+                variant="outlined"
+                type={showConfirmPassword ? 'text' : 'password'}
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Confirm your password"
+                disabled={loading}
+                required
+                sx={{ mt: 2, mb: 0 }}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <LockIcon color="action" />
+                    </InputAdornment>
+                  ),
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        edge="end"
+                        disabled={loading}
+                      >
+                        {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                }}
+              />
+            )}
 
-        .login-container {
-          background: white;
-          padding: 2rem;
-          border-radius: 10px;
-          box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
-          width: 100%;
-          max-width: 400px;
-        }
+            {/* Submit Button */}
+            <Button
+              type="submit"
+              fullWidth
+              variant="contained"
+              size="large"
+              disabled={loading}
+              sx={{
+                mt: 3,
+                py: 1.5,
+                fontSize: '1rem',
+                fontWeight: 600,
+              }}
+            >
+              {loading ? (
+                <CircularProgress size={24} color="inherit" />
+              ) : (
+                isLoginMode ? 'Sign In' : 'Create Account'
+              )}
+            </Button>
+          </Box>
 
-        h1 {
-          color: #333;
-          text-align: center;
-          margin-bottom: 0.5rem;
-          font-size: 1.5rem;
-        }
-
-        h2 {
-          color: #667eea;
-          text-align: center;
-          margin-bottom: 1.5rem;
-        }
-
-        .form-group {
-          margin-bottom: 1rem;
-        }
-
-        label {
-          display: block;
-          margin-bottom: 0.5rem;
-          color: #555;
-          font-weight: 500;
-        }
-
-        input {
-          width: 100%;
-          padding: 0.75rem;
-          border: 1px solid #ddd;
-          border-radius: 5px;
-          font-size: 1rem;
-          transition: border-color 0.3s;
-        }
-
-        input:focus {
-          outline: none;
-          border-color: #667eea;
-        }
-
-        button[type="submit"] {
-          width: 100%;
-          padding: 0.75rem;
-          background: #667eea;
-          color: white;
-          border: none;
-          border-radius: 5px;
-          font-size: 1rem;
-          cursor: pointer;
-          transition: background 0.3s;
-          margin-top: 1rem;
-        }
-
-        button[type="submit"]:hover:not(:disabled) {
-          background: #5568d3;
-        }
-
-        button[type="submit"]:disabled {
-          opacity: 0.6;
-          cursor: not-allowed;
-        }
-
-        .error-message {
-          background: #fee;
-          color: #c33;
-          padding: 0.75rem;
-          border-radius: 5px;
-          margin-bottom: 1rem;
-          text-align: center;
-        }
-
-        .toggle-mode {
-          text-align: center;
-          margin-top: 1rem;
-        }
-
-        .toggle-mode button {
-          background: none;
-          border: none;
-          color: #667eea;
-          cursor: pointer;
-          text-decoration: underline;
-          font-size: 0.9rem;
-        }
-      `}</style>
-    </div>
+          {/* Toggle Mode Link */}
+          <Box sx={{ textAlign: 'center', mt: 3 }}>
+            <Typography variant="body2" color="text.secondary">
+              {isLoginMode ? "Don't have an account? " : 'Already have an account? '}
+              <Link
+                component="button"
+                variant="body2"
+                onClick={toggleMode}
+                sx={{
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  textDecoration: 'none',
+                  '&:hover': {
+                    textDecoration: 'underline',
+                  },
+                }}
+                disabled={loading}
+              >
+                {isLoginMode ? 'Sign Up' : 'Sign In'}
+              </Link>
+            </Typography>
+          </Box>
+        </CardContent>
+      </Card>
+    </Box>
   );
 }
 

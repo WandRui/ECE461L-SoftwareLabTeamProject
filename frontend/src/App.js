@@ -7,6 +7,12 @@
 
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { ThemeProvider, CssBaseline } from '@mui/material';
+import '@fontsource/roboto/300.css';
+import '@fontsource/roboto/400.css';
+import '@fontsource/roboto/500.css';
+import '@fontsource/roboto/700.css';
+import theme from './theme/theme';
 import LoginPage from './components/LoginPage';
 import MainPortal from './components/MainPortal';
 import ProjectPage from './components/ProjectPage';
@@ -55,71 +61,72 @@ function App() {
   };
 
   return (
-    <Router>
-      <div className="App">
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <Router>
         <Routes>
-          {/* Login Route */}
-          <Route 
-            path="/login" 
-            element={
-              isAuthenticated ? 
-                <Navigate to="/portal" /> : 
-                <LoginPage onLogin={handleLogin} />
-            } 
-          />
+            {/* Login Route */}
+            <Route 
+              path="/login" 
+              element={
+                isAuthenticated ? 
+                  <Navigate to="/portal" /> : 
+                  <LoginPage onLogin={handleLogin} />
+              } 
+            />
 
-          {/* Main Portal Route (Protected) */}
-          <Route 
-            path="/portal" 
-            element={
-              isAuthenticated ? 
-                <MainPortal username={username} userRole={userRole} onLogout={handleLogout} /> : 
-                <Navigate to="/login" />
-            } 
-          />
+            {/* Main Portal Route (Protected) */}
+            <Route 
+              path="/portal" 
+              element={
+                isAuthenticated ? 
+                  <MainPortal username={username} userRole={userRole} onLogout={handleLogout} /> : 
+                  <Navigate to="/login" />
+              } 
+            />
 
-          {/* Project Page Route (Protected) */}
-          <Route 
-            path="/projects" 
-            element={
-              isAuthenticated ? 
-                <ProjectPage username={username} userRole={userRole} onLogout={handleLogout} /> : 
-                <Navigate to="/login" />
-            } 
-          />
+            {/* Project Page Route (Protected) */}
+            <Route 
+              path="/projects" 
+              element={
+                isAuthenticated ? 
+                  <ProjectPage username={username} userRole={userRole} onLogout={handleLogout} /> : 
+                  <Navigate to="/login" />
+              } 
+            />
 
-          {/* Hardware Inventory Route (Protected) */}
-          <Route 
-            path="/hardware" 
-            element={
-              isAuthenticated ? 
-                <HardwareInventoryPage username={username} userRole={userRole} onLogout={handleLogout} /> : 
-                <Navigate to="/login" />
-            } 
-          />
+            {/* Hardware Inventory Route (Protected) */}
+            <Route 
+              path="/hardware" 
+              element={
+                isAuthenticated ? 
+                  <HardwareInventoryPage username={username} userRole={userRole} onLogout={handleLogout} /> : 
+                  <Navigate to="/login" />
+              } 
+            />
 
-          {/* Admin Panel Route (Protected + admin only) */}
-          <Route
-            path="/admin"
-            element={
-              isAuthenticated && (userRole === 'admin' || userRole === 'superadmin') ?
-                <AdminPage username={username} userRole={userRole} onLogout={handleLogout} /> :
-                <Navigate to="/portal" />
-            }
-          />
+            {/* Admin Panel Route (Protected + admin only) */}
+            <Route
+              path="/admin"
+              element={
+                isAuthenticated && (userRole === 'admin' || userRole === 'superadmin') ?
+                  <AdminPage username={username} userRole={userRole} onLogout={handleLogout} /> :
+                  <Navigate to="/portal" />
+              }
+            />
 
-          {/* Default Route - Redirect to login or portal */}
-          <Route 
-            path="/" 
-            element={
-              isAuthenticated ? 
-                <Navigate to="/portal" /> : 
-                <Navigate to="/login" />
-            } 
-          />
-        </Routes>
-      </div>
-    </Router>
+            {/* Default Route - Redirect to login or portal */}
+            <Route 
+              path="/" 
+              element={
+                isAuthenticated ? 
+                  <Navigate to="/portal" /> : 
+                  <Navigate to="/login" />
+              } 
+            />
+          </Routes>
+      </Router>
+    </ThemeProvider>
   );
 }
 

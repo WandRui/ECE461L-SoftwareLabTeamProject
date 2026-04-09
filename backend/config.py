@@ -22,9 +22,8 @@ MONGO_TLS_CA_FILE = certifi.where()
 # ============================================================================
 
 # Secret key for session management
-# TODO: Change this to a strong, random secret key in production
-# TODO: Use environment variable: os.environ.get('SECRET_KEY')
-SECRET_KEY = 'your-secret-key-here-change-in-production'
+# In production, use environment variable; fallback to a dev key for local development
+SECRET_KEY = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
 
 # Session configuration
 SESSION_TYPE = 'filesystem'
