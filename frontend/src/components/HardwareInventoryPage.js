@@ -75,6 +75,7 @@ function HardwareInventoryPage({ username, userRole, onLogout }) {
   const [quantity, setQuantity] = useState('');
   const [isCheckoutMode, setIsCheckoutMode] = useState(true);
   const [formLoading, setFormLoading] = useState(false);
+  const [formError, setFormError] = useState(''); // Error displayed inside the dialog
 
   // Create hardware set dialog state
   const [showCreateDialog, setShowCreateDialog] = useState(false);
@@ -119,21 +120,21 @@ function HardwareInventoryPage({ username, userRole, onLogout }) {
 
   const handleCheckout = async (e) => {
     e.preventDefault();
-    setError('');
+    setFormError('');
 
     if (!selectedProject || !quantity) {
-      setError('Please select a project and enter quantity');
+      setFormError('Please select a project and enter quantity');
       return;
     }
 
     const qty = parseInt(quantity);
     if (isNaN(qty) || qty <= 0) {
-      setError('Please enter a valid quantity');
+      setFormError('Please enter a valid quantity');
       return;
     }
 
     if (qty > selectedHardware.available) {
-      setError('Insufficient hardware available');
+      setFormError('Insufficient hardware available');
       return;
     }
 
@@ -151,10 +152,10 @@ function HardwareInventoryPage({ username, userRole, onLogout }) {
         setSelectedProject('');
         loadData();
       } else {
-        setError(response.error || 'Failed to checkout hardware');
+        setFormError(response.error || 'Failed to checkout hardware');
       }
     } catch (err) {
-      setError('An error occurred during checkout');
+      setFormError('An error occurred during checkout');
       console.error('Checkout error:', err);
     } finally {
       setFormLoading(false);
@@ -163,16 +164,16 @@ function HardwareInventoryPage({ username, userRole, onLogout }) {
 
   const handleCheckin = async (e) => {
     e.preventDefault();
-    setError('');
+    setFormError('');
 
     if (!selectedProject || !quantity) {
-      setError('Please select a project and enter quantity');
+      setFormError('Please select a project and enter quantity');
       return;
     }
 
     const qty = parseInt(quantity);
     if (isNaN(qty) || qty <= 0) {
-      setError('Please enter a valid quantity');
+      setFormError('Please enter a valid quantity');
       return;
     }
 
@@ -190,10 +191,10 @@ function HardwareInventoryPage({ username, userRole, onLogout }) {
         setSelectedProject('');
         loadData();
       } else {
-        setError(response.error || 'Failed to check in hardware');
+        setFormError(response.error || 'Failed to check in hardware');
       }
     } catch (err) {
-      setError('An error occurred during check-in');
+      setFormError('An error occurred during check-in');
       console.error('Check-in error:', err);
     } finally {
       setFormLoading(false);
@@ -253,10 +254,10 @@ function HardwareInventoryPage({ username, userRole, onLogout }) {
 
   
 
-  const openForm = (hardware, isCheckout) => {
+const openForm = (hardware, isCheckout) => {
     setSelectedHardware(hardware);
     setIsCheckoutMode(isCheckout);
-    setError('');
+    setFormError('');
     setQuantity('');
     setSelectedProject('');
   };
@@ -579,6 +580,13 @@ function HardwareInventoryPage({ username, userRole, onLogout }) {
           </IconButton>
         </DialogTitle>
         <DialogContent>
+          {/* Form Error - displayed inside dialog */}
+          {formError && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {formError}
+            </Alert>
+          )}
+
           <FormControl fullWidth sx={{ mt: 1, mb: 2 }}>
             <InputLabel>Select Project</InputLabel>
             <Select
