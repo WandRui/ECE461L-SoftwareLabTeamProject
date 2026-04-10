@@ -22,7 +22,8 @@ from database import usersDB, projectsDB, hardwareDB
 # Initialize Flask application
 app = Flask(__name__)
 app.config['SECRET_KEY'] = config.SECRET_KEY
-app.config['SESSION_TYPE'] = 'filesystem'
+# Use Flask's default client-side session (stored in signed cookie)
+# This is more reliable for cloud deployments like Render
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=24)
 # Auto-configure cookie settings based on environment
 # Development (HTTP localhost): SECURE=False, SAMESITE=Lax

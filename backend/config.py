@@ -25,11 +25,6 @@ MONGO_TLS_CA_FILE = certifi.where()
 # In production, use environment variable; fallback to a dev key for local development
 SECRET_KEY = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
 
-# Session configuration
-SESSION_TYPE = 'filesystem'
-SESSION_PERMANENT = False
-PERMANENT_SESSION_LIFETIME = timedelta(hours=24)
-
 # ============================================================================
 # Database Configuration
 # ============================================================================
